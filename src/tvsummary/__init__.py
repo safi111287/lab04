@@ -8,9 +8,10 @@ from .aggregations import (
     ShowsPerGenre,
     ShowsPerNetwork,
 )
+from .errors import DownloadError
 from .models import Show
 from .report import build_summary, write_summary
-from .sources import DownloadError, ShowSource
+from .sources import ShowSource
 
 __all__ = [
     "Aggregation",

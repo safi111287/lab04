@@ -1,26 +1,43 @@
 import requests
 
 from .config import SOURCE_URL, TIMEOUT
+from .errors import DownloadError, ResponseShapeError
 from .models import Show
-
-
-class DownloadError(Exception):
-    """Indicate that TV show data could not be downloaded."""
 
 
 class ShowSource:
     """Download TVMaze records and return Show objects."""
 
-    def __init__(self, url=SOURCE_URL, timeout=TIMEOUT):
+    def __init__(
+        self,
+        url: str = SOURCE_URL,
+        timeout: float = TIMEOUT,
+    ) -> None:
         self.url = url
         self.timeout = timeout
 
-    def fetch_records(self):
+    def fetch_records(self) -> list[Show]:
+        """Download records and validate their structure."""
         try:
             response = requests.get(self.url, timeout=self.timeout)
             response.raise_for_status()
-            records = response.json()
-        except (requests.RequestException, ValueError) as error:
-            raise DownloadError(str(error)) from None
+        except requests.RequestException as error:
+            raise DownloadError("Could not download TV show data.") from error
 
-        return [Show(record) for record in records]
+        try:
+            records = response.json()
+        except ValueError as error:
+            raise ResponseShapeError(
+                "The server response is not valid JSON."
+            ) from error
+
+        if not isinstance(records, list):
+            raise ResponseShapeError("Expected a list of TV show records.")
+
+        shows = []
+        for record in records:
+            if not isinstance(record, dict):
+                raise ResponseShapeError("Each TV show record must be an object.")
+            shows.append(Show(record))
+
+        return shows
