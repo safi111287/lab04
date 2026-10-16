@@ -1,4 +1,5 @@
 import json
+import logging
 import platform
 from dataclasses import asdict
 from importlib.metadata import PackageNotFoundError, version
@@ -16,11 +17,14 @@ from .errors import ReportError
 from .models import Show
 from .sampling import select_featured_shows
 
+logger = logging.getLogger(__name__)
+
 
 def build_summary(
     records: list[Show], settings: Settings | None = None
 ) -> dict[str, object]:
     """Combine aggregations and optionally add featured shows."""
+    logger.info("Building summary for %s records.", len(records))
     summary: dict[str, object] = {
         "source_url": settings.url if settings is not None else SOURCE_URL,
         "records_processed": len(records),
@@ -35,6 +39,7 @@ def build_summary(
     ]
 
     for aggregation in aggregations:
+        logger.debug("Computing aggregation %s.", aggregation.key)
         summary[aggregation.key] = aggregation.compute(records)
 
     if settings is not None:
@@ -55,6 +60,8 @@ def write_summary(summary: dict[str, object], path: Path = OUTPUT_PATH) -> bool:
 
     except OSError as error:
         raise ReportError("Could not save the summary file.") from error
+
+    logger.info("Saved JSON output to %s.", path)
 
     return True
 

@@ -84,15 +84,33 @@ def test_fetch_records_requires_list(
         ShowSource().fetch_records()
 
 
-def test_fetch_records_requires_objects(
+def test_fetch_records_skips_invalid_objects(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     response = Mock()
-    response.json.return_value = ["not a record"]
+    response.json.return_value = [
+        {"name": "First Show"},
+        "not a record",
+        {"name": "Second Show"},
+    ]
     monkeypatch.setattr(
         "tvsummary.sources.requests.get",
         Mock(return_value=response),
     )
 
-    with pytest.raises(ResponseShapeError, match="must be an object"):
-        ShowSource().fetch_records()
+    with caplog.at_level("DEBUG", logger="tvsummary.sources"):
+        shows = ShowSource().fetch_records()
+
+    assert [show.name for show in shows] == ["First Show", "Second Show"]
+
+    messages = [
+        (record.levelname, record.getMessage())
+        for record in caplog.records
+        if record.name == "tvsummary.sources"
+    ]
+
+    assert ("INFO", "Downloading TV show records.") in messages
+    assert ("DEBUG", "Processing record at index 0.") in messages
+    assert ("WARNING", "Skipping invalid record at index 1.") in messages
+    assert ("INFO", "Loaded 2 valid TV show records.") in messages

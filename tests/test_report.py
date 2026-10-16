@@ -79,3 +79,17 @@ def test_write_run_info(tmp_path: Path) -> None:
     assert data["python_version"]
     assert set(data["tool_versions"]) == {"pytest", "mypy", "ruff"}
     assert all(data["tool_versions"].values())
+
+
+def test_report_logs_progress(
+    sample_shows: list[Show],
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level("DEBUG", logger="tvsummary.report"):
+        summary = build_summary(sample_shows)
+        write_summary(summary, tmp_path / "summary.json")
+
+    assert "Building summary for 3 records." in caplog.text
+    assert "Computing aggregation shows_per_genre." in caplog.text
+    assert "Saved JSON output" in caplog.text

@@ -1,8 +1,12 @@
+import logging
+
 import requests
 
 from .config import SOURCE_URL, TIMEOUT
 from .errors import DownloadError, ResponseShapeError
 from .models import Show
+
+logger = logging.getLogger(__name__)
 
 
 class ShowSource:
@@ -17,7 +21,9 @@ class ShowSource:
         self.timeout = timeout
 
     def fetch_records(self) -> list[Show]:
-        """Download records and validate their structure."""
+        """Download records and skip invalid record objects."""
+        logger.info("Downloading TV show records.")
+
         try:
             response = requests.get(self.url, timeout=self.timeout)
             response.raise_for_status()
@@ -34,10 +40,15 @@ class ShowSource:
         if not isinstance(records, list):
             raise ResponseShapeError("Expected a list of TV show records.")
 
-        shows = []
-        for record in records:
+        shows: list[Show] = []
+
+        for index, record in enumerate(records):
             if not isinstance(record, dict):
-                raise ResponseShapeError("Each TV show record must be an object.")
+                logger.warning("Skipping invalid record at index %s.", index)
+                continue
+
+            logger.debug("Processing record at index %s.", index)
             shows.append(Show(record))
 
+        logger.info("Loaded %s valid TV show records.", len(shows))
         return shows
