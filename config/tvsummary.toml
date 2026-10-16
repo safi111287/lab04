@@ -1,0 +1,6 @@
+url = "https://api.tvmaze.com/shows?page=0"
+timeout = 10
+output_folder = "data/processed"
+seed = 42
+sample_size = 5
+log_level = "INFO"
