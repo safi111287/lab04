@@ -1,7 +1,10 @@
+from typing import Any
+
+
 class Show:
     """Represent one TV show and clean its values."""
 
-    def __init__(self, record):
+    def __init__(self, record: dict[str, Any]) -> None:
         self.name = record.get("name") or "Unknown"
 
         language = record.get("language")
@@ -20,7 +23,7 @@ class Show:
 
         rating = rating_data.get("average")
         try:
-            self.rating = float(rating) if rating is not None else None
+            self.rating: float | None = float(rating) if rating is not None else None
         except (TypeError, ValueError):
             self.rating = None
 
@@ -35,11 +38,11 @@ class Show:
         premiered = record.get("premiered")
         self.premiered = premiered if isinstance(premiered, str) else None
 
-        self.year = None
+        self.year: int | None = None
         if self.premiered and len(self.premiered) >= 4:
             year_text = self.premiered[:4]
             if year_text.isdigit():
                 self.year = int(year_text)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

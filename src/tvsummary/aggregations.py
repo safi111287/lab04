@@ -1,21 +1,24 @@
+from .models import Show
+
+
 class Aggregation:
     """Define the common interface for summary calculations."""
 
-    def __init__(self, key):
+    def __init__(self, key: str) -> None:
         self.key = key
 
-    def compute(self, records):
+    def compute(self, records: list[Show]) -> object:
         raise NotImplementedError("Subclasses must implement compute().")
 
 
 class ShowsPerGenre(Aggregation):
     """Count how many shows belong to each genre."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("shows_per_genre")
 
-    def compute(self, records):
-        genre_counts = {}
+    def compute(self, records: list[Show]) -> dict[str, int]:
+        genre_counts: dict[str, int] = {}
 
         for show in records:
             for genre in show.genres:
@@ -27,11 +30,11 @@ class ShowsPerGenre(Aggregation):
 class AverageRatingByLanguage(Aggregation):
     """Calculate the average show rating for each language."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("average_rating_by_language")
 
-    def compute(self, records):
-        ratings_by_language = {}
+    def compute(self, records: list[Show]) -> dict[str, float]:
+        ratings_by_language: dict[str, list[float]] = {}
 
         for show in records:
             if not show.language or show.rating is None:
@@ -51,11 +54,11 @@ class AverageRatingByLanguage(Aggregation):
 class ShowsPerNetwork(Aggregation):
     """Count how many shows belong to each network."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("shows_per_network")
 
-    def compute(self, records):
-        network_counts = {}
+    def compute(self, records: list[Show]) -> dict[str, int]:
+        network_counts: dict[str, int] = {}
 
         for show in records:
             network_name = show.network_name
@@ -67,11 +70,11 @@ class ShowsPerNetwork(Aggregation):
 class ShowsPerDecade(Aggregation):
     """Count how many shows premiered in each decade."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("shows_per_decade")
 
-    def compute(self, records):
-        decade_counts = {}
+    def compute(self, records: list[Show]) -> dict[str, int]:
+        decade_counts: dict[str, int] = {}
 
         for show in records:
             if show.year is None:
@@ -79,7 +82,6 @@ class ShowsPerDecade(Aggregation):
 
             decade = (show.year // 10) * 10
             decade_name = f"{decade}s"
-
             decade_counts[decade_name] = decade_counts.get(decade_name, 0) + 1
 
         return decade_counts
@@ -88,15 +90,15 @@ class ShowsPerDecade(Aggregation):
 class DataQuirks(Aggregation):
     """Summarize missing values and unique languages."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("data_quirks")
 
-    def compute(self, records):
+    def compute(self, records: list[Show]) -> dict[str, int | list[str]]:
         shows_without_genres = 0
         shows_without_rating = 0
         shows_without_network = 0
         shows_without_premiered_date = 0
-        unique_languages = set()
+        unique_languages: set[str] = set()
 
         for show in records:
             if not show.genres:
