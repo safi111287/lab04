@@ -1,154 +1,210 @@
-# TV Summary
+# TV Show Summary — Lab 04
 
-An installable Python package that downloads TV show records from TVMaze, summarizes them, and saves the results as JSON.   
-It refactors the Lab 02 program into classes and modules while preserving its summary keys and calculations.
-
-## Data source
-
-URL: https://api.tvmaze.com/shows?page=0
-
-Each record represents one TV show. The program uses its language, genres, average rating, network, and premiere date. The Show class also stores its name.
-
-The Lab 02 run returned approximately 240 records. The source data may change over time.
+This Python package downloads TVMaze show records and creates a JSON summary.  
+It includes offline tests, custom errors, logging, type annotations, TOML settings,  
+and repeatable featured-show sampling.
 
 ## Setup
 
-Install Anaconda or Miniconda and Git first.
-
-Clone the repository and enter its folder:
+Run these commands from an Anaconda Prompt:
 
 ```bash
-git clone https://github.com/safi111287/lab03.git
-cd lab03
-```
-
-Create and activate the environment, install the pinned dependencies, and install the package:
-
-```bash
+git clone https://github.com/safi111287/lab04.git test-lab04-clone
+cd test-lab04-clone
 conda env create -f environment.yml
-conda activate tvsummary
-pip install -r requirements.txt
-pip install -e .
+conda activate tvsummary-lab04
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-The conda environment uses Python 3.11. The editable installation allows changes to the package code to be used without reinstalling it.
+The environment uses Python 3.11. Direct dependencies and checking tools are
+pinned in requirements.txt.
 
 ## Run
 
-Run this command from the repository root:
+Run commands from the repository root.
+
+Use the default settings file, config/tvsummary.toml:
+
+```bash
+python -m tvsummary.main
+```
+
+Choose a settings file explicitly:
+
+```bash
+python -m tvsummary.main --config config/tvsummary.toml
+```
+
+The root entry point also works:
 
 ```bash
 python main.py
 ```
 
-The program downloads the records, prints the summary, and saves it to:
+With the supplied settings, the program writes:
 
-```text
-data/processed/summary.json
-```
+- data/processed/summary.json
+- data/processed/run_info.json
 
-The output contains:
+The summary contains the source URL, record count, genre counts, average ratings
+by language, network counts, decade counts, missing-value counts, and featured_shows.
 
-- Source URL and number of records processed.
-- Number of shows per genre.
-- Average rating by language.
-- Number of shows per network.
-- Number of shows per premiere decade.
-- Missing-value counts and unique languages.
-
-If downloading fails, the program prints a clear message and stops without a traceback. If writing the output fails, it prints a clear message.
-
-## Test
-
-Run the tests from the repository root:
+To view the generated summary in VS Code:
 
 ```bash
-python -m unittest discover -s tests
+code data/processed/summary.json
 ```
 
-The three tests in `tests/test_models.py` exercise the Show class using handmade records. They cover valid records, missing values, and malformed values. They do not make network requests.
+Alternatively, expand data/processed in the VS Code Explorer and click
+summary.json.
 
-## Layout
+## Check it
 
-- `main.py`: Coordinates downloading, summary creation, and writing; handles download errors.
-- `src/tvsummary/__init__.py`: Re-exports public classes and functions for direct package imports.
-- `src/tvsummary/config.py`: Keeps the source URL, request timeout, and output path together.
-- `src/tvsummary/models.py`: Defines Show and cleans each record when it is created.
-- `src/tvsummary/sources.py`: Defines ShowSource and DownloadError; isolates downloading and is the only module that imports requests.
-- `src/tvsummary/aggregations.py`: Defines the Aggregation base class and five calculation subclasses.
-- `src/tvsummary/report.py`: Builds the summary and writes it to JSON, keeping reporting separate from downloading and calculations.
-- `tests/test_models.py`: Contains offline tests for Show.
-- `environment.yml`: Defines the conda environment name, Python version, and pip.
-- `requirements.txt`: Pins the pip dependency versions.
-- `pyproject.toml`: Defines package metadata, dependencies, and discovery under src.
-- `.gitignore`: Excludes generated and private files.
-- `data/raw/.gitkeep`: Preserves the empty raw-data folder in Git.
-- `data/processed/summary.json`: Stores the output of a successful run.
+```bash
+python -m pytest
+python -m mypy
+python -m ruff check .
+python -m ruff format --check .
+```
 
-## What moved where
+The current test suite contains 50 passing tests. The tests do not require
+internet access.
 
-| Lab 02 function or setting | Location in Lab 03 |
-|---|---|
-| `fetch_records(url)` | `sources.py`: `ShowSource.fetch_records()` |
-| `shows_per_genre(records)` | `aggregations.py`: `ShowsPerGenre.compute()` |
-| `average_rating_by_language(records)` | `aggregations.py`: `AverageRatingByLanguage.compute()` |
-| `shows_per_network(records)` | `aggregations.py`: `ShowsPerNetwork.compute()` |
-| `shows_per_decade(records)` | `aggregations.py`: `ShowsPerDecade.compute()` |
-| `data_quirks(records)` | `aggregations.py`: `DataQuirks.compute()` |
-| `build_summary(records)` | `report.py`: `build_summary()` |
-| `write_summary(summary, path)` | `report.py`: `write_summary()` |
-| `main()` | `main.py`: `main()` |
-| Record-value checks inside calculation functions | `models.py`: `Show.__init__()` |
-| `source_url`, request timeout, and output path | `config.py`: `SOURCE_URL`, `TIMEOUT`, and `OUTPUT_PATH` |
+## Settings
 
-## Design choices
+Settings are loaded with tomllib into a frozen Settings dataclass.
+All six fields are required.
 
-### Show
+| Field | Meaning | Supplied value |
+| --- | --- | --- |
+| url | HTTP or HTTPS endpoint returning a list of show objects | https://api.tvmaze.com/shows?page=0 |
+| timeout | Positive finite request timeout in seconds | 10 |
+| output_folder | Non-empty output directory path | data/processed |
+| seed | Integer used for repeatable sampling | 42 |
+| sample_size | Non-negative number of featured shows | 5 |
+| log_level | DEBUG, INFO, WARNING, ERROR, or CRITICAL | INFO |
 
-Show represents one TV show. Its constructor centralizes cleaning so that calculations can use attributes instead of repeatedly checking raw dictionaries.
+Relative output paths are resolved from the current working directory.
+If sample_size exceeds the number of records, all available shows are selected.
 
-Missing genres become an empty list. Missing or invalid ratings become None and are excluded from rating averages. Missing network names use "No Network". The year is extracted from the first four characters of the premiere date, matching the original calculation.
+## Errors and exit codes
 
-The `has_network` attribute separately tracks whether network information was present. This preserves the original distinction between missing network information and a network object without a name.
+Expected application errors inherit from TVSummaryError.
 
-The `__str__` method returns the show name.
+| Error | When it happens | What the user sees |
+| --- | --- | --- |
+| SettingsError | Settings file is missing, unreadable, invalid TOML, incomplete, or contains invalid values | ERROR log and an Error: message on stderr |
+| DownloadError | Connection, timeout, or HTTP request fails | ERROR log and an Error: message on stderr |
+| ResponseShapeError | Response is invalid JSON or is not a list | ERROR log and an Error: message on stderr |
+| ReportError | An output file cannot be written | ERROR log and an Error: message on stderr |
 
-### ShowSource and DownloadError
+Successful execution returns exit code 0.
+Expected application failures return exit code 1 without a traceback.
+Argparse handles command-line usage errors separately and returns exit code 2.
 
-ShowSource manages downloading and returns Show objects instead of raw dictionaries. Its URL and timeout default to the settings in config.py.
+Low-level request, parsing, and file errors are translated using exception
+chaining. The entry point handles expected application errors.
 
-DownloadError carries download failures to main.py, where a readable message is printed. This keeps requests-specific error handling inside sources.py.
+A non-object item inside the response list is skipped with a WARNING.
+Missing optional show fields are cleaned by Show and included in the
+missing-value calculations.
 
-### Aggregation and inheritance
+To check a missing settings file:
 
-Aggregation provides a result key and a common compute method. Its five subclasses override compute:
+```bash
+python -m tvsummary.main --config config/missing.toml
+```
 
-- ShowsPerGenre
-- AverageRatingByLanguage
-- ShowsPerNetwork
-- ShowsPerDecade
-- DataQuirks
+In Anaconda Prompt, check the exit code immediately afterward:
 
-The summary builder loops over a mixed list of these objects and calls compute on each one without checking its subclass. Each object supplies its own calculation through the same interface.
+```bat
+echo %ERRORLEVEL%
+```
 
-To add another calculation, create an Aggregation subclass, set its result key, implement compute, and add an instance to the list in build_summary.
+The expected result is 1. In PowerShell, use $LASTEXITCODE instead.
 
-### Reporting and entry point
+## Logging
 
-report.py separates summary assembly and JSON writing from downloading and individual calculations. main.py remains a short entry point that connects these responsibilities.
+Each reporting module uses a named logger. Logging is configured by the entry
+point through logging_setup.py.
 
-### Behaviour preservation
+- DEBUG records individual record processing and aggregation calculations.
+- INFO records download, summary, and file-writing milestones.
+- WARNING records skipped invalid items.
+- ERROR records failures that stop the application.
 
-The original and refactored summary builders were compared using the same downloaded records. Their dictionaries matched, including all summary keys and values.
+Log messages use parameter arguments rather than formatted strings.
+Record contents and request credentials are not logged.
 
-The original records.py was removed when the package replaced it. Its unchanged version remains available in the Git commit history.
+## Reproducing a run
+
+Use the same Python version, installed package versions, settings, and input
+records in the same order.
+
+Featured shows are selected using a local random.Random(seed) instance.
+The same seed and ordered records produce the same selection without changing
+the global random state.
+
+run_info.json records all settings, the Python version, and the installed
+pytest, mypy, and Ruff versions.
+
+The live TVMaze data can change. Using the same URL and seed alone does not
+guarantee identical results if the downloaded records or their order change.
+
+## What the tests cover
+
+The offline tests cover:
+
+- Show cleanup for valid, missing, and malformed values.
+- Every aggregation using a shared handmade fixture in conftest.py.
+- Download success and translated connection, HTTP, and JSON errors.
+- Invalid response shapes and warnings for skipped records.
+- Required settings and invalid values using parametrized tests.
+- JSON output and file errors using tmp_path.
+- Repeatable sampling, empty input, and oversized samples.
+- Preservation of input order and global random state during sampling.
+- Featured shows and run-information output.
+- Report progress logging.
+- Entry-point success and expected failures, including exit codes,
+  stderr messages, and ERROR logs.
+
+Live TVMaze availability is not tested automatically because network access
+would make the test suite dependent on an external service. Requests are
+replaced with mocks.
+
+## Why the modules are separate
+
+- models.py isolates record cleanup so calculations can work with Show objects.
+- sources.py isolates HTTP requests so tests can replace the network easily.
+- aggregations.py keeps each calculation independent of downloading and files.
+- config.py isolates settings loading and validation from application execution.
+- sampling.py isolates random selection so reproducibility can be tested.
+- report.py assembles results and writes JSON without controlling the program.
+- errors.py provides shared application errors without coupling modules together.
+- logging_setup.py keeps logging configuration in one place.
+- src/tvsummary/main.py connects the responsibilities and controls exit codes.
+- The root main.py delegates to the package entry point to avoid duplicate logic.
+
+## Behaviour preservation
+
+During the Lab 03 refactor, the original and refactored summary builders were
+compared using the same downloaded records. Their dictionaries matched.
+
+Lab 04 keeps the existing aggregation keys and calculations and adds
+featured_shows when settings are supplied. The source_url reflects the configured
+URL.
+
+The original records.py remains available in Git history.
 
 ## Known limitations
 
-- Only TVMaze page 0 is downloaded; the program does not retrieve all API pages.
-- Downloading requires an internet connection and an available TVMaze service.
-- Source updates can change the output between runs.
+- The supplied URL retrieves only TVMaze page 0; there is no automatic pagination.
+- Downloading requires internet access and an available server.
+- Live source updates can change the output between runs.
 - Raw records are held in memory and are not saved under data/raw.
-- Premiere-year extraction checks the first four characters rather than validating the entire date.
-- The program should be run from the repository root because the output path is relative.
-- The current automated tests cover Show; the remaining modules do not yet have automated test coverage.
+- Premiere-year extraction checks the first four characters rather than the
+  entire date.
+- Run commands from the repository root when using the supplied relative paths.
+- Output files are written separately; if writing run_info.json fails,
+  summary.json may already have been saved.
