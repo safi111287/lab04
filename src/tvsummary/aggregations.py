@@ -59,9 +59,7 @@ class ShowsPerNetwork(Aggregation):
 
         for show in records:
             network_name = show.network_name
-            network_counts[network_name] = (
-                network_counts.get(network_name, 0) + 1
-            )
+            network_counts[network_name] = network_counts.get(network_name, 0) + 1
 
         return network_counts
 
@@ -82,9 +80,7 @@ class ShowsPerDecade(Aggregation):
             decade = (show.year // 10) * 10
             decade_name = f"{decade}s"
 
-            decade_counts[decade_name] = (
-                decade_counts.get(decade_name, 0) + 1
-            )
+            decade_counts[decade_name] = decade_counts.get(decade_name, 0) + 1
 
         return decade_counts
 

@@ -1,13 +1,13 @@
 import json
 
-from .config import SOURCE_URL, OUTPUT_PATH
 from .aggregations import (
-    ShowsPerGenre,
     AverageRatingByLanguage,
-    ShowsPerNetwork,
-    ShowsPerDecade,
     DataQuirks,
+    ShowsPerDecade,
+    ShowsPerGenre,
+    ShowsPerNetwork,
 )
+from .config import OUTPUT_PATH, SOURCE_URL
 
 
 def build_summary(records):

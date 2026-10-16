@@ -1,4 +1,4 @@
-from tvsummary import ShowSource, DownloadError, build_summary, write_summary
+from tvsummary import DownloadError, ShowSource, build_summary, write_summary
 from tvsummary.config import OUTPUT_PATH
 
 

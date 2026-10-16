@@ -33,9 +33,7 @@ class Show:
             self.network_name = "No Network"
 
         premiered = record.get("premiered")
-        self.premiered = (
-            premiered if isinstance(premiered, str) else None
-        )
+        self.premiered = premiered if isinstance(premiered, str) else None
 
         self.year = None
         if self.premiered and len(self.premiered) >= 4:
